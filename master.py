@@ -192,8 +192,6 @@ def updateDBThread():
         while(1):
                 time.sleep(2)
 		DBUpdate_cache = [None]*3
-		ser.close()
-		ser.open()
                 sendLocal("#DST00E")
                 sendLocal("#DSH00E")
                 sendLocal("#DSP00E")
