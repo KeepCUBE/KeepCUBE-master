@@ -23,31 +23,13 @@ class tag:
 
 DBUpdate_cache = [None]*3
 
+ser = serial.Serial(
+        port='/dev/ttyUSB0',
+        baudrate = 9600)
 
 HOST = ''   # Symbolic name, meaning all available interfaces
 PORT = 8888 # Arbitrary non-privileged port
 
-ser = serial.Serial(
-        port='/dev/ttyUSB0',
-        baudrate = 9600,
-        parity=serial.PARITY_NONE,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS,
-)
-
-#ser.xonxoff = False     #disable software flow control
-#ser.rtscts = False     #disable hardware (RTS/CTS) flow control
-#ser.dsrdtr = False       #disable hardware (DSR/DTR) flow control
-#ser.writeTimeout = 2     #timeout for write
-
-print "serial set"
-
-if ser.isOpen():
-	ser.close()
-	time.sleep(0.5)
-	ser.open()
-else:
-	ser.open()
 
 db = MySQLdb.connect(host="localhost", user="root",passwd="kosticka", db="kc")
 cur = db.cursor()
@@ -55,6 +37,17 @@ print tag.ok + "MySQL: connected"
 
 peekedByte = None
 peekingByte = None
+
+def listGetInt(list):
+	value = ""
+	while True:
+		byte = list.pop(0)
+		if byte.isdigit():
+			value = str(value) + str(byte)
+		else:
+			list.insert(0,byte)
+			break
+	return value
 
 def serialPeek():
         global peekedByte
@@ -91,27 +84,28 @@ def sendLocal(data):
 #__________ovladani switchu___________
 
 def switchOn(switch_id):
+        #db.commit()
         out = None
         cur.execute("SELECT on_code FROM switches WHERE switch_id = " + str(switch_id))
         out = cur.fetchone()
         if(out):
-                print out[0]
+                print tag.info + "Sending request to turn switch ID " + str(switch_id) + " on, using code " + str(out[0]) + " ."
                 sendLocal("#DBC;" + str(out[0]) + ";E")
-                print "switchon"
-        else:
-                print tag.fail + "NoneType exception: is the switch ID really in a databse ?"
+	else:
+		print "out: " + out
+                print tag.fail + "NoneType exception: is the switch ID " + str(switch_id) + " really in a databse ?"
 
 
 def switchOff(switch_id):
+	#db.commit()
         out = None
         cur.execute("SELECT off_code FROM switches WHERE switch_id = " + str(switch_id))
         out = cur.fetchone()
         if(out):
-                print out[0]
+                print tag.info + "Sending request to turn switch ID " + str(switch_id) + " off, using code " + str(out[0]) + " ."
                 sendLocal("#DBC;" + str(out[0]) + ";E")
-                print "switchoff"
         else:
-                print tag.fail + "NoneType exception: is the switch ID really in a databse ?"
+                 print tag.fail + "NoneType exception: is the switch ID " + str(switch_id) + " really in a databse ?"
 
 #__________zmena barvy________________
 
@@ -135,41 +129,37 @@ def getLocalData(data):
 #____________________THREAD - TCP com______________________
 
 def clientthread(conn):
-    time.sleep(1)
     #Sending message to connected client
     conn.send('SRVCONF\n') #send only takes string
-    print "SRVCONF sent"
-    l=0
-    while True:
+    conn.settimeout(10.0)
+    try:
         data = conn.recv(7)
-        if data:
-            if data == "CLNCONF":
-                break
-        l = l + 1
-        time.sleep(1)
-        if l > 10:
-            print "timeout"
-            sys.exit()
-    print "CLNCONF received"
+        if data != "CLNCONF":
+		print tag.fail + "Wrong client verification !"
+		sys.exit()
+    except socket.timeout:
+	print tag.fail + "Client verification not received !"
+	sys.exit()
+    conn.setblocking(1)
+    print tag.ok + "Client connection stabilized"
     #infinite loop so that function do not terminate and thread do not end.
-    time.sleep(1)
     while True:
         #Receiving from client
         data = conn.recv(1024)
         data = list(data)
         #___________receiving from app___________
         while  data:
-                print data
+                #print data
                 if data.pop(0) == '#':
-                        print "# found"
                         dsc = data.pop(0)
                         if dsc == 'D':
                                 dsc = data.pop(0)
                                 if dsc == 'T':
                                         dsc = data.pop(0)
                                         if dsc == 'S':
-                                                switch_id = str(data.pop(0)) + str(data.pop(0))
-                                                if data.pop(0) == '0':
+                                                switch_id = listGetInt(data)
+						data.pop(0) #issue poping A (action) here, verify if it is actually there
+                                                if data.pop(0) == '0': #issue command end(E) not verified
                                                         switchOff(switch_id)
                                                 else:
                                                         switchOn(switch_id)
@@ -204,12 +194,13 @@ def updateDBThread():
 				break
 			time.sleep(1)
              	if count < 10:
+			print ""
 			sql = ("""INSERT INTO sensor_readings (temperature, humidity, pressure) VALUES (%s,%s,%s)""",(DBUpdate_cache[0], DBUpdate_cache[1], DBUpdate_cache[2]))
 			cur.execute(*sql)
 	      		db.commit()
        	       		print tag.info + "updateDBThread: values inserted into the database (temp: " + DBUpdate_cache[0] + " hum: " +  DBUpdate_cache[1] + " press: " + DBUpdate_cache[2] + ")" 
 		else:
-			print tag.warning + "updateDBThread: whole respond NOT received after 10 attempts"
+			print tag.warning + "updateDBThread: entire respond NOT received after 10 attempts"
 		time.sleep(20)
 
 #_________________THREAD - Serial receive handling______________
@@ -220,7 +211,8 @@ def receiverThread():
         while(1):
 		if ser.inWaiting() > 0:
 			#print tag.detect + "receiverThread(serial): "+str(ser.inWaiting())+" incoming bytes detected"
-                        if serialPeek() == "#":
+                        #print tag.detect + "receriverThread(serial): received -> " + str(ser.read(ser.inWaiting()))
+			if serialPeek() == "#":
 				print tag.detect + "receiverThread(serial): incoming msg detected"
                                 time.sleep(0.1)
 				serialRead()
@@ -264,17 +256,20 @@ p1.start()
 
 #Start updating DB every 10mins
 p2 = Thread(target = updateDBThread)
-p2.start()
+#p2.start()
 
 try:
         while 1:
                 conn, addr = s.accept()
                 print tag.ok + 'Connected with ' + addr[0] + ':' + str(addr[1])
                 start_new_thread(clientthread ,(conn,))
-        s.close()
+	s.close()
 except KeyboardInterrupt:
         print "   " + tag.fail + 'Keyboard interrupt'
-        try:
+	s.shutdown(socket.SHUT_RDWR)
+        s.close()
+	print "socket closed"
+	try:
             sys.exit(0)
         except SystemExit:
             os._exit(0)
