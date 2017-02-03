@@ -44,16 +44,19 @@ while (True):
     if (message):
         print tag.dump + "Received new message: " + str(message['data'])
         if (validate_dsc(str(message['data']))):
-            head = message['data'][1:3]
+            head = message['data'][1:4]
             print tag.dump + "Extracted head: " + head
             body = message['data'][4:-1]
             print tag.dump + "Extracted body: " + body
             if head == 'SVA':
                 SVA(body)
+                print tag.ok + "Done processing command " + str(message['data'])
             elif head == 'SVB':
                 SVB(body)
+                print tag.ok + "Done processing command " + str(message['data'])
             elif head == 'SVW':
                 SVW(body)
+                print tag.ok + "Done processing command " + str(message['data'])
             else:
                 print tag.warn + "DSC was not recognized or is not supported"
         else:
