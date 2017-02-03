@@ -39,15 +39,15 @@ peekedByte = None
 peekingByte = None
 
 def listGetInt(list):
-	value = ""
-	while True:
-		byte = list.pop(0)
-		if byte.isdigit():
-			value = str(value) + str(byte)
-		else:
-			list.insert(0,byte)
-			break
-	return value
+        value = ""
+        while True:
+                byte = list.pop(0)
+                if byte.isdigit():
+                        value = str(value) + str(byte)
+                else:
+                        list.insert(0,byte)
+                        break
+        return value
 
 def serialPeek():
         global peekedByte
@@ -91,13 +91,13 @@ def switchOn(switch_id):
         if(out):
                 print tag.info + "Sending request to turn switch ID " + str(switch_id) + " on, using code " + str(out[0]) + " ."
                 sendLocal("#DBC;" + str(out[0]) + ";E")
-	else:
-		print "out: " + out
+        else:
+                print "out: " + out
                 print tag.fail + "NoneType exception: is the switch ID " + str(switch_id) + " really in a databse ?"
 
 
 def switchOff(switch_id):
-	#db.commit()
+        #db.commit()
         out = None
         cur.execute("SELECT off_code FROM switches WHERE switch_id = " + str(switch_id))
         out = cur.fetchone()
@@ -135,11 +135,11 @@ def clientthread(conn):
     try:
         data = conn.recv(7)
         if data != "CLNCONF":
-		print tag.fail + "Wrong client verification !"
-		sys.exit()
+                print tag.fail + "Wrong client verification !"
+                sys.exit()
     except socket.timeout:
-	print tag.fail + "Client verification not received !"
-	sys.exit()
+        print tag.fail + "Client verification not received !"
+        sys.exit()
     conn.setblocking(1)
     print tag.ok + "Client connection stabilized"
     #infinite loop so that function do not terminate and thread do not end.
@@ -158,7 +158,7 @@ def clientthread(conn):
                                         dsc = data.pop(0)
                                         if dsc == 'S':
                                                 switch_id = listGetInt(data)
-						data.pop(0) #issue poping A (action) here, verify if it is actually there
+                                                data.pop(0) #issue poping A (action) here, verify if it is actually there
                                                 if data.pop(0) == '0': #issue command end(E) not verified
                                                         switchOff(switch_id)
                                                 else:
@@ -177,45 +177,45 @@ def clientthread(conn):
 #__________________THREAD - DB Update______________________
 
 def updateDBThread():
-	print tag.ok + "updateDBThread: started"
+        print tag.ok + "updateDBThread: started"
         global DBUpdate_cache
         while(1):
                 time.sleep(2)
-		DBUpdate_cache = [None]*3
+                DBUpdate_cache = [None]*3
                 sendLocal("#DST00E")
                 sendLocal("#DSH00E")
                 sendLocal("#DSP00E")
-		print tag.info + "updateDBThread: 3 DS requests sent"
+                print tag.info + "updateDBThread: 3 DS requests sent"
                 time.sleep(1)
-		count = 0
+                count = 0
                 while (DBUpdate_cache[0] == None and DBUpdate_cache[1] == None and DBUpdate_cache[2] == None):
-			count = count + 1
-			if count >= 10:
-				break
-			time.sleep(1)
-             	if count < 10:
-			print ""
-			sql = ("""INSERT INTO sensor_readings (temperature, humidity, pressure) VALUES (%s,%s,%s)""",(DBUpdate_cache[0], DBUpdate_cache[1], DBUpdate_cache[2]))
-			cur.execute(*sql)
-	      		db.commit()
-       	       		print tag.info + "updateDBThread: values inserted into the database (temp: " + DBUpdate_cache[0] + " hum: " +  DBUpdate_cache[1] + " press: " + DBUpdate_cache[2] + ")" 
-		else:
-			print tag.warning + "updateDBThread: entire respond NOT received after 10 attempts"
-		time.sleep(20)
+                        count = count + 1
+                        if count >= 10:
+                                break
+                        time.sleep(1)
+                if count < 10:
+                        print ""
+                        sql = ("""INSERT INTO sensor_readings (temperature, humidity, pressure) VALUES (%s,%s,%s)""",(DBUpdate_cache[0], DBUpdate_cache[1], DBUpdate_cache[2]))
+                        cur.execute(*sql)
+                        db.commit()
+                        print tag.info + "updateDBThread: values inserted into the database (temp: " + DBUpdate_cache[0] + " hum: " +  DBUpdate_cache[1] + " press: " + DBUpdate_cache[2] + ")"
+                else:
+                        print tag.warning + "updateDBThread: entire respond NOT received after 10 attempts"
+                time.sleep(20)
 
 #_________________THREAD - Serial receive handling______________
 
 def receiverThread():
-	print tag.ok + "receiverThread(serial): started"
+        print tag.ok + "receiverThread(serial): started"
         global DBUpdate_cache
         while(1):
-		if ser.inWaiting() > 0:
-			#print tag.detect + "receiverThread(serial): "+str(ser.inWaiting())+" incoming bytes detected"
+                if ser.inWaiting() > 0:
+                        #print tag.detect + "receiverThread(serial): "+str(ser.inWaiting())+" incoming bytes detected"
                         #print tag.detect + "receriverThread(serial): received -> " + str(ser.read(ser.inWaiting()))
-			if serialPeek() == "#":
-				print tag.detect + "receiverThread(serial): incoming msg detected"
+                        if serialPeek() == "#":
+                                print tag.detect + "receiverThread(serial): incoming msg detected"
                                 time.sleep(0.1)
-				serialRead()
+                                serialRead()
                                 if ser.inWaiting() > 0:
                                         oznaceni = serialRead()
                                         if(oznaceni == "R"):
@@ -225,10 +225,10 @@ def receiverThread():
                                                         if(oznaceni == "T"):
                                                                 DBUpdate_cache[0] = serialGetInt()
                                                         elif(oznaceni == "P"):
-								DBUpdate_cache[2] = serialGetInt()
+                                                                DBUpdate_cache[2] = serialGetInt()
                                                         elif(oznaceni == "H"):
-								DBUpdate_cache[1] = serialGetInt()
-							serialRead() #issue1, end (E) validation not handled
+                                                                DBUpdate_cache[1] = serialGetInt()
+                                                        serialRead() #issue1, end (E) validation not handled
                         else:
                                 serialRead()
                 else:
@@ -263,13 +263,13 @@ try:
                 conn, addr = s.accept()
                 print tag.ok + 'Connected with ' + addr[0] + ':' + str(addr[1])
                 start_new_thread(clientthread ,(conn,))
-	s.close()
+        s.close()
 except KeyboardInterrupt:
         print "   " + tag.fail + 'Keyboard interrupt'
-	s.shutdown(socket.SHUT_RDWR)
+        s.shutdown(socket.SHUT_RDWR)
         s.close()
-	print "socket closed"
-	try:
+        print "socket closed"
+        try:
             sys.exit(0)
         except SystemExit:
             os._exit(0)
