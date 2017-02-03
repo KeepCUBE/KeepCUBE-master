@@ -48,16 +48,13 @@ while (True):
             print tag.dump + "Extracted head: " + head
             body = message['data'][4:-1]
             print tag.dump + "Extracted body: " + body
-            if head == 'SVA':
-                SVA(body)
-                print tag.ok + "Done processing command " + str(message['data'])
-            elif head == 'SVB':
-                SVB(body)
-                print tag.ok + "Done processing command " + str(message['data'])
-            elif head == 'SVW':
-                SVW(body)
-                print tag.ok + "Done processing command " + str(message['data'])
+            possibles = globals().copy()
+            possibles.update(locals())
+            method = possibles.get(head)
+            if not method:
+                print tag.fail + "Method %s is not implemented" % head
             else:
-                print tag.warn + "DSC was not recognized or is not supported"
+                method(body)
+                print tag.ok + "Done processing command " + message['data']
         else:
             print tag.warn + "Message is not valid DSC command"
