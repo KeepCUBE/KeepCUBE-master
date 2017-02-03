@@ -28,9 +28,9 @@ def SVW(dsc):
 
 def log(level, message):
     print getattr(tag, level) + message
-    filename = "redis-log-" + strftime("%Y-%m-%d", gmtime())
+    filename = "redis-log-" + strftime("%Y-%m-%d", gmtime()) + ".log"
     file = open(filename, 'a')
-    file.write(strftime("%Y-%m-%d %H:%M:%S", gmtime()) + " " + level + " >> " + message + "\r\n")
+    file.write(strftime("%Y-%m-%d %H:%M:%S", gmtime()) + " " + level + " | " + message + "\r\n")
 
 
 def validate_dsc(command):
