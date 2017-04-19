@@ -1,4 +1,5 @@
 import redis
+import serial
 from termcolor import colored
 from time import gmtime, strftime
 
@@ -13,6 +14,7 @@ class tag:
 
 def SVA(dsc):
     print tag.info + "Sending command " + dsc + " via ATMega"
+    ser.write(dsc)
     return True
 
 
@@ -43,11 +45,17 @@ log("ok", "Process started")
 r = redis.StrictRedis(host='localhost', port=6379, db=0)
 p = r.pubsub()
 try:
-    p.subscribe('test')
+    p.subscribe('keep')
     log("ok", "Subscription active")
 except:
     log("fail", "Subscription failed")
 message = p.get_message()
+try:
+    ser = serial.Serial("/dev/ttyAMA0", 9600, timeout = 1)
+    ser.open()
+    log("ok", "Serial opened.")
+except:
+    log = ("fail", "Opening serial failed")
 while (True):
     message = p.get_message()
     if (message):
