@@ -59,7 +59,7 @@ while (True):
     message = p.get_message()
     if (message):
         log("dump", "Received new message: " + str(message['data']))
-        dsc = parse_dsc(message)
+        dsc = parse_dsc(message['data'])
         if(dsc != False):
             possibles = globals().copy()
             possibles.update(locals())
