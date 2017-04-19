@@ -1,5 +1,6 @@
 import redis
 import serial
+from dscParser import parse_dsc
 from termcolor import colored
 from time import gmtime, strftime
 
@@ -58,18 +59,15 @@ while (True):
     message = p.get_message()
     if (message):
         log("dump", "Received new message: " + str(message['data']))
-        if (validate_dsc(str(message['data']))):
-            head = message['data'][1:4]
-            log("dump", "Extracted head: " + head)
-            body = message['data'][4:-1]
-            log("dump", "Extracted body: " + body)
+        dsc = parse_dsc(message)
+        if(dsc != False):
             possibles = globals().copy()
             possibles.update(locals())
-            method = possibles.get(head)
+            method = possibles.get(dsc['head'])
             if not method:
-                log("fail", "Method %s is not implemented" % head)
+                log("fail", "Method %s is not implemented" % dsc['head'])
             else:
-                method(body)
+                method(dsc['body']['C'])
                 log("ok", "Done processing command " + message['data'])
         else:
-            log("warn", "Message is not valid DSC command")
+            log("warn", "Message was not valid DSC command")
