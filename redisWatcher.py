@@ -50,12 +50,9 @@ try:
 except:
     log("fail", "Subscription failed")
 message = p.get_message()
-try:
-    ser = serial.Serial("/dev/ttyAMA0", 9600, timeout = 1)
-    ser.open()
-    log("ok", "Serial opened.")
-except:
-    log = ("fail", "Opening serial failed")
+ser = serial.Serial("/dev/ttyAMA0", 9600, timeout = 1)
+ser.open()
+log("ok", "Serial opened.")
 while (True):
     message = p.get_message()
     if (message):
