@@ -1,5 +1,5 @@
 from dscParser import parse_dsc
 
-test = "#SVAC&tadybudeuplnecokoliv&;"
+test = "#SVAtest;"
 
 print (parse_dsc(test))

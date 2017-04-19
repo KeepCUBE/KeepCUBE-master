@@ -67,7 +67,13 @@ while (True):
             if not method:
                 log("fail", "Method %s is not implemented" % dsc['head'])
             else:
-                method(dsc['body']['C'])
-                log("ok", "Done processing command " + message['data'])
+                if False in dsc['body']:
+                    log("fail", "No parameters found!")
+                else:
+                    if 'C' not in dsc['body']:
+                        log("fail", "Command parameter not found!")
+                    else:
+                        method(dsc['body']['C'])
+                        log("ok", "Done processing command " + message['data'])
         else:
-            log("warn", "Message was not valid DSC command")
+            log("fail", "Message was not valid DSC command")
